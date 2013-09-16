@@ -1,0 +1,79 @@
+#!/bin/sh
+#-
+# Copyright (c) 2013 Stanislav Putrya
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+#
+# THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+# OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+# LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+# OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+# SUCH DAMAGE.
+#
+# $FreeBSD: stable/9/usr.sbin/bsdinstall/scripts/auto 248237 2013-03-13 13:41:28Z nwhitehorn $
+
+: ${DIALOG_OK=0}
+: ${DIALOG_CANCEL=1}
+: ${DIALOG_HELP=2}
+: ${DIALOG_EXTRA=3}
+: ${DIALOG_ITEM_HELP=4}
+: ${DIALOG_ESC=255}
+
+rsync_error(){
+	exec 3>&1
+	dialog --backtitle "FreeBSD Installer" \
+		--title "RSYNC-server Selection" \
+		--msgbox "Rsync server path isn't valid. Please try again." 0 0 2>&1 1>&3
+	exec 3>&-
+	rsync_start
+}
+
+rsync_start() {
+    exec 3>&1
+    RSYNC_DISTSITE=`dialog --backtitle "FreeBSD Installer" \
+	--title "RSYNC-server Selection" \
+	--inputbox "Please enter the URL to an rsync-server for clone system:" \
+	0 0 "rsync://" 2>&1 1>&3`
+    RSYNC_BUTTON=$?
+    exec 3>&-
+
+    case $RSYNC_BUTTON in
+	$DIALOG_CANCEL)
+		exit 1
+		;;
+	$DIALOG_OK)
+		;;
+    esac
+
+    RSYNC_PATH=`echo "$RSYNC_DISTSITE" | sed 's/\(.*\)\/\///g'`
+    RSYNC_HOST=`echo "$RSYNC_PATH" | sed 's/\(.*\)@//g ; s/:\(.*\)//g'`
+    if [ -z $RSYNC_HOST ]; then
+	rsync_error
+    fi
+    RSYNC_TEST="`rsync --timeout=2 --list-only $RSYNC_PATH | awk '{print $5}'`"
+    for path in $RSYNC_TEST; do
+	if [ "$path" = "boot" ]; then
+	    NOERROR=1
+	fi
+    done
+    if [ -z $NOERROR ]; then
+	rsync_error
+    fi
+}
+
+rsync_start
+echo $RSYNC_PATH >&2

@@ -1,0 +1,15 @@
+{
+if ($0~/^[a-z]/)
+{
+FILE=$0
+}
+if (index($0, "to-check=") > 0)
+{
+	split($0, pieces, "to-check=")
+		split(pieces[2], term, ")");
+	split(term[1], division, "/");
+	printf("%s|%d\n",FILE,(1-(division[1]/division[2]))*100)
+	fflush();
+}
+}
+

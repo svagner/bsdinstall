@@ -1,0 +1,2 @@
+#!/bin/sh
+/usr/sbin/rsync -avzlu --progress --exclude dev ${1} ${2} | /usr/bin/awk -f /usr/libexec/bsdinstall/rsync-awk
